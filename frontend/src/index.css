@@ -1,0 +1,25 @@
+/* eslint-disable */
+/* stylelint-disable */
+@import '@fortawesome/fontawesome-free/css/all.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+    scroll-behavior: smooth;
+  }
+
+/* Menampilkan scrollbar hanya saat user scroll */
+body::-webkit-scrollbar {
+  width: 3px; /* Ukuran scrollbar */
+}
+
+body::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.5); /* Warna scrollbar */
+  border-radius: 10px;
+}
+
+/* Scroll muncul saat konten digulir */
+body:focus-within {
+  overflow: scroll;
+}
