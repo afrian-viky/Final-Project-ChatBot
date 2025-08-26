@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
+// Gunakan environment variable untuk API URL
+const API_URL = process.env.REACT_APP_API_URL || "https://backend-production-ddcc.up.railway.app";
+
 const ChatInterface = () => {
   const [query, setQuery] = useState("");
   const [file, setFile] = useState(null);
@@ -41,11 +44,16 @@ const ChatInterface = () => {
         formData.append("file", file);
         formData.append("fileQuery", query);
 
-        res = await axios.post("https://backend-production-ddcc.up.railway.app/upload", formData, {
+        console.log(`🔄 Making file request to: ${API_URL}/upload`);
+        res = await axios.post(`${API_URL}/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
+          timeout: 30000,
         });
       } else {
-        res = await axios.post("https://backend-production-ddcc.up.railway.app/chat", { query });
+        console.log(`🔄 Making chat request to: ${API_URL}/chat`);
+        res = await axios.post(`${API_URL}/chat`, { query }, {
+          timeout: 30000,
+        });
       }
 
       const { answer } = res.data;
@@ -54,7 +62,24 @@ const ChatInterface = () => {
       setQuery("");
       handleRemoveFile();
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("❌ Error sending message:", error);
+      
+      let errorMessage = "Something went wrong. Please try again.";
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = "Request timeout. Server might be loading AI model.";
+      } else if (error.response) {
+        errorMessage = `Server error: ${error.response.data}`;
+      } else {
+        errorMessage = "Network error. Check your connection and backend status.";
+      }
+      
+      // Tambahkan error ke chat history
+      setChatHistory((prev) => [...prev, { 
+        user: query, 
+        ai: `❌ Error: ${errorMessage}` 
+      }]);
+      setQuery("");
+      handleRemoveFile();
     } finally {
       setLoading(false);
     }
@@ -103,6 +128,18 @@ const ChatInterface = () => {
       id="tools"
       className="flex flex-col items-center justify-center h-screen bg-sky-100"
     >
+      {/* Debug info - hapus di production */}
+      <div style={{ 
+        padding: '5px 10px', 
+        background: '#333', 
+        color: 'white',
+        fontSize: '12px', 
+        marginBottom: '10px',
+        borderRadius: '4px'
+      }}>
+        🔧 API: {API_URL}
+      </div>
+
       {/* Chat Window */}
       <div className="relative w-3/4 lg:w-1/2 h-3/4 bg-white rounded-lg shadow-lg flex flex-col">
         {/* Header */}
@@ -125,7 +162,11 @@ const ChatInterface = () => {
               {/* AI Response */}
               {chat.ai && (
                 <div className="flex justify-start mt-2">
-                  <div className="bg-gray-300 text-black p-3 rounded-lg max-w-md">
+                  <div className={`p-3 rounded-lg max-w-md ${
+                    chat.ai.startsWith('❌ Error:') 
+                      ? 'bg-red-100 text-red-800 border border-red-300' 
+                      : 'bg-gray-300 text-black'
+                  }`}>
                     {renderResponse(chat.ai)}
                   </div>
                 </div>
@@ -157,7 +198,7 @@ const ChatInterface = () => {
                     d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8z"
                   ></path>
                 </svg>
-                <span>Loading...</span>
+                <span>AI is processing...</span>
               </div>
             </div>
           )}
@@ -168,7 +209,7 @@ const ChatInterface = () => {
           {/* File Preview */}
           {filePreview && (
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-gray-700">{filePreview}</span>
+              <span className="text-gray-700">📎 {filePreview}</span>
               <button
                 onClick={handleRemoveFile}
                 className="text-red-500 hover:text-red-700"
@@ -210,12 +251,19 @@ const ChatInterface = () => {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Type something..."
               className="flex-grow outline-none"
+              disabled={loading}
+              onKeyPress={(e) => e.key === 'Enter' && !loading && handleChat()}
             />
 
             {/* Send Button */}
             <button
               onClick={handleChat}
-              className="p-2 bg-indigo-600 rounded-full text-white hover:bg-blue-600"
+              disabled={loading}
+              className={`p-2 rounded-full text-white ${
+                loading 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-indigo-600 hover:bg-blue-600'
+              }`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
