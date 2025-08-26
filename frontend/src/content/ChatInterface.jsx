@@ -41,11 +41,11 @@ const ChatInterface = () => {
         formData.append("file", file);
         formData.append("fileQuery", query);
 
-        res = await axios.post("http://localhost:8080/upload", formData, {
+        res = await axios.post("https://backend-production-ddcc.up.railway.app/upload", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
       } else {
-        res = await axios.post("http://localhost:8080/chat", { query });
+        res = await axios.post("https://backend-production-ddcc.up.railway.app/chat", { query });
       }
 
       const { answer } = res.data;
