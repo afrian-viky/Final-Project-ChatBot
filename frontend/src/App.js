@@ -185,12 +185,7 @@ function App() {
   };
 
   return (
-    <div id="App" className="App">
-      {/* Debug info - hapus di production */}
-      <div style={{ padding: '10px', background: '#f0f0f0', fontSize: '12px', marginBottom: '10px' }}>
-        🔧 API URL: {API_URL}
-      </div>
-      
+    <div id="App" className="App"> 
       <h2 className="text-2xl md:text-3xl font-bold mb-4 px-20 text-center">
         Tools for Analyze File and Chat With AI
       </h2>
