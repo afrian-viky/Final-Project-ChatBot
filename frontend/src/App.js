@@ -22,6 +22,9 @@ ChartJS.register(
   Legend
 );
 
+// Gunakan environment variable untuk API URL
+const API_URL = process.env.REACT_APP_API_URL || "https://backend-production-ddcc.up.railway.app";
+
 function App() {
   const [file, setFile] = useState(null);
   const [query, setQuery] = useState("");
@@ -29,6 +32,8 @@ function App() {
   const [response, setResponse] = useState("");
   const [responseChat, setResponseChat] = useState("");
   const [chartData, setChartData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -43,21 +48,36 @@ function App() {
       alert("Please enter a question related to the file.");
       return;
     }
+    
+    setLoading(true);
     const formData = new FormData();
     formData.append("file", file);
     formData.append("fileQuery", fileQuery);
 
     try {
-      const res = await axios.post("https://backend-production-ddcc.up.railway.app/upload", formData, {
+      console.log(`🔄 Making request to: ${API_URL}/upload`);
+      const res = await axios.post(`${API_URL}/upload`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: 30000, // 30 detik timeout
       });
       setResponse(res.data.answer);
+      console.log("✅ Upload successful");
     } catch (error) {
-      console.error("Error uploading file:", error);
+      console.error("❌ Error uploading file:", error);
+      if (error.code === 'ECONNABORTED') {
+        alert("Request timeout. Server mungkin sedang loading model AI.");
+      } else if (error.response) {
+        alert(`Server error: ${error.response.data}`);
+      } else {
+        alert("Network error. Check your connection and backend status.");
+      }
+    } finally {
+      setLoading(false);
     }
 
+    // Parse CSV untuk chart
     const reader = new FileReader();
     reader.onload = (e) => {
       const csv = e.target.result;
@@ -102,11 +122,27 @@ function App() {
       alert("Please enter a question.");
       return;
     }
+    
+    setChatLoading(true);
+    
     try {
-      const res = await axios.post("https://backend-production-ddcc.up.railway.app/chat", { query });
+      console.log(`🔄 Making request to: ${API_URL}/chat`);
+      const res = await axios.post(`${API_URL}/chat`, { query }, {
+        timeout: 30000, // 30 detik timeout
+      });
       setResponseChat(res.data.answer);
+      console.log("✅ Chat successful");
     } catch (error) {
-      console.error("Error querying chat:", error);
+      console.error("❌ Error querying chat:", error);
+      if (error.code === 'ECONNABORTED') {
+        alert("Request timeout. Server mungkin sedang loading model AI.");
+      } else if (error.response) {
+        alert(`Server error: ${error.response.data}`);
+      } else {
+        alert("Network error. Check your connection and backend status.");
+      }
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -150,6 +186,11 @@ function App() {
 
   return (
     <div id="App" className="App">
+      {/* Debug info - hapus di production */}
+      <div style={{ padding: '10px', background: '#f0f0f0', fontSize: '12px', marginBottom: '10px' }}>
+        🔧 API URL: {API_URL}
+      </div>
+      
       <h2 className="text-2xl md:text-3xl font-bold mb-4 px-20 text-center">
         Tools for Analyze File and Chat With AI
       </h2>
@@ -169,12 +210,20 @@ function App() {
               placeholder="Ask a question about the uploaded file..."
               className="file-query-input"
             />
-            <button onClick={handleUpload} className="upload-button">
-              Upload and Analyze
+            <button 
+              onClick={handleUpload} 
+              className="upload-button"
+              disabled={loading}
+            >
+              {loading ? "Processing..." : "Upload and Analyze"}
             </button>
             <div className="response-section">
               <h3 style={{ fontWeight: "bold" }}>File Response</h3>
-              {renderResponse(response)}
+              {loading ? (
+                <p>🔄 Loading... This may take a moment for AI processing.</p>
+              ) : (
+                renderResponse(response)
+              )}
             </div>
             {chartData && (
               <div className="chart-container">
@@ -195,14 +244,22 @@ function App() {
               placeholder="Ask a question..."
               className="chat-input"
             />
-            <button onClick={handleChat} className="send-button">
-              Chat
+            <button 
+              onClick={handleChat} 
+              className="send-button"
+              disabled={chatLoading}
+            >
+              {chatLoading ? "Thinking..." : "Chat"}
             </button>
             <div className="chat-window">
               <h3 style={{ textAlign: "center", fontWeight: "bold" }}>
                 Chat Response
               </h3>
-              {renderResponse(responseChat)}
+              {chatLoading ? (
+                <p>🤔 AI is thinking... Please wait.</p>
+              ) : (
+                renderResponse(responseChat)
+              )}
             </div>
           </div>
         </div>
